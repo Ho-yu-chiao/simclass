@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SimClass - 5 大學生 Agent 動態狀態卡片</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      margin: 0;
+      padding: 20px 0;
+      background-color: #f1f5f9;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* 頂部操作工具列（列印時自動隱藏） */
+    .toolbar {
+      width: 190mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 10px 16px;
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .toolbar-info {
+      font-size: 13.5px;
+      color: #475569;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      border: none;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .random-btn {
+      background-color: #10b981;
+      color: #ffffff;
+    }
+
+    .random-btn:hover {
+      background-color: #059669;
+    }
+
+    .print-btn {
+      background-color: #2563eb;
+      color: #ffffff;
+    }
+
+    .print-btn:hover {
+      background-color: #1d4ed8;
+    }
+
+    /* A4 網格容器 */
+    .sheet {
+      width: 190mm;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6mm;
+    }
+
+    .page-break {
+      grid-column: 1 / -1;
+      height: 0;
+      page-break-before: always;
+      break-before: page;
+    }
+
+    /* 緊湊型實體卡片樣式 */
+    .card {
+      background: #ffffff;
+      border: 1.5px dashed #94a3b8;
+      border-radius: 10px;
+      padding: 12px 14px 10px 14px;
+      height: auto;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .card-header {
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      letter-spacing: 0.3px;
+      font-family: monospace;
+    }
+
+    /* 五種類型專屬色彩標籤 */
+    .badge-solid_understanding { background-color: #dcfce7; color: #166534; }
+    .badge-partial_understanding { background-color: #e0f2fe; color: #075985; }
+    .badge-misconception_holder { background-color: #fef3c7; color: #92400e; }
+    .badge-anxious_low_achiever { background-color: #fee2e2; color: #991b1b; }
+    .badge-distracted_disruptive { background-color: #f3e8ff; color: #6b21a8; }
+
+    .card-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 4px;
+    }
+
+    .card-title-row h2 {
+      margin: 0;
+      font-size: 16.5px;
+      color: #0f172a;
+    }
+
+    .agent-id {
+      font-size: 11px;
+      color: #64748b;
+      font-family: monospace;
+      font-weight: 600;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0 4px 0;
+    }
+
+    .section-title {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .dynamic-tag {
+      font-size: 9.5px;
+      color: #64748b;
+      background-color: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .metric-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-bottom: 5px;
+      color: #334155;
+    }
+
+    .metric-label {
+      width: 115px;
+    }
+
+    .range-hint {
+      font-size: 9.5px;
+      color: #94a3b8;
+      font-family: monospace;
+    }
+
+    .bar-container {
+      flex: 1;
+      height: 7px;
+      background-color: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 0 8px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.35s ease;
+    }
+
+    .metric-val {
+      font-family: monospace;
+      font-size: 11.5px;
+      font-weight: 700;
+      width: 32px;
+      text-align: right;
+      color: #0f172a;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+    }
+
+    .status-item {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 4px 7px;
+    }
+
+    .status-label {
+      font-size: 9.5px;
+      color: #64748b;
+      display: block;
+      margin-bottom: 1px;
+    }
+
+    .status-val {
+      font-size: 11px;
+      font-weight: 600;
+      color: #1e293b;
+    }
+
+    .interaction-box {
+      margin-top: 8px;
+      margin-bottom: 4px;
+      background-color: #f8fafc;
+      border-left: 3px solid #3b82f6;
+      border-radius: 0 4px 4px 0;
+      padding: 6px 8px;
+      font-size: 10.5px;
+      line-height: 1.45;
+    }
+
+    .interaction-box strong {
+      color: #1e3a8a;
+    }
+
+    .interaction-box.alert {
+      border-left-color: #f59e0b;
+      background-color: #fffbeb;
+    }
+    .interaction-box.alert strong {
+      color: #92400e;
+    }
+
+    .interaction-box.danger {
+      border-left-color: #ef4444;
+      background-color: #fef2f2;
+    }
+    .interaction-box.danger strong {
+      color: #991b1b;
+    }
+
+    .cut-corner {
+      display: flex;
+      justify-content: space-between;
+      font-size: 8.5px;
+      color: #94a3b8;
+      font-family: monospace;
+      margin-top: 4px;
+    }
+
+    @media print {
+      body {
+        background: none;
+        padding: 0;
+      }
+      .toolbar {
+        display: none !important;
+      }
+      .card {
+        box-shadow: none;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="toolbar">
+    <div class="toolbar-info">
+      <strong>SimClass 學生 Agent 狀態卡</strong>（重啟自動隨機初始化・互動後可動態突破區間）
+    </div>
+    <div class="btn-group">
+      <button class="btn random-btn" onclick="randomizeAll()">🎲 重新隨機抽值</button>
+      <button class="btn print-btn" onclick="window.print()">🖨️ 列印 / 存為 PDF</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="card-container"></div>
+
+  <script>
+    const agentsConfig = [
+      {
+        id: "AGENT_A",
+        code: "solid_understanding",
+        name: "A. 穩固理解型",
+        masteryRange: [0.80, 0.95],
+        confidenceRange: [0.75, 0.90],
+        masteryColor: "#16a34a",
+        confidenceColor: "#2563eb",
+        engagement: "engaged (積極投入)",
+        behavior: "raising_hand",
+        emotion: "confident",
+        misconception: "false",
+        misconceptionColor: "#166534",
+        boxClass: "",
+        typicalBehavior: "概念穩固、容易搶答與延伸提問",
+        teacherReaction: "高層次問題會更投入；等待太久可能直接搶答"
+      },
+      {
+        id: "AGENT_B",
+        code: "partial_understanding",
+        name: "B. 部分理解型",
+        masteryRange: [0.50, 0.70],
+        confidenceRange: [0.35, 0.55],
+        masteryColor: "#0284c7",
+        confidenceColor: "#64748b",
+        engagement: "passive (觀望猶豫)",
+        behavior: "silent",
+        emotion: "neutral",
+        misconception: "false",
+        misconceptionColor: "#166534",
+        boxClass: "",
+        typicalBehavior: "懂一半、不確定時保持沉默觀望",
+        teacherReaction: "被點名＋給予適當等待時間後較可能作答"
+      },
+      {
+        id: "AGENT_C",
+        code: "misconception_holder",
+        name: "C. 迷思概念型",
+        masteryRange: [0.20, 0.40],
+        confidenceRange: [0.70, 0.90],
+        masteryColor: "#f59e0b",
+        confidenceColor: "#ef4444",
+        engagement: "confused (概念混淆)",
+        behavior: "answering",
+        emotion: "curious",
+        misconception: "true (固定迷思)",
+        misconceptionColor: "#b45309",
+        boxClass: "alert",
+        typicalBehavior: "持有固定錯誤概念（低掌握但盲目高自信）",
+        teacherReaction: "若只給答案不釐清迷思，錯誤概念會持續"
+      },
+      {
+        id: "AGENT_D",
+        code: "anxious_low_achiever",
+        name: "D. 低成就焦慮型",
+        masteryRange: [0.15, 0.35],
+        confidenceRange: [0.10, 0.30],
+        masteryColor: "#ef4444",
+        confidenceColor: "#64748b",
+        engagement: "confused (緊張退縮)",
+        behavior: "avoiding_eye_contact",
+        emotion: "anxious",
+        misconception: "true",
+        misconceptionColor: "#b91c1c",
+        boxClass: "danger",
+        typicalBehavior: "害怕答錯、迴避視線、需要學習鷹架",
+        teacherReaction: "教師正向回饋與分段提示會顯著提高參與"
+      },
+      {
+        id: "AGENT_E",
+        code: "distracted_disruptive",
+        name: "E. 分心干擾型",
+        masteryRange: [0.30, 0.55],
+        confidenceRange: [0.40, 0.65],
+        masteryColor: "#9333ea",
+        confidenceColor: "#a855f7",
+        engagement: "off_task (離題波動)",
+        behavior: "playing_with_items",
+        emotion: "bored",
+        misconception: "false",
+        misconceptionColor: "#166534",
+        boxClass: "",
+        typicalBehavior: "打岔、離題、把玩文具、注意力易下降",
+        teacherReaction: "規則提醒、重新聚焦或互動任務可改善狀態"
+      }
+    ];
+
+    function getRandomInRange(min, max) {
+      return (Math.random() * (max - min) + min).toFixed(2);
+    }
+
+    function randomizeAll() {
+      const container = document.getElementById("card-container");
+      container.innerHTML = "";
+
+      agentsConfig.forEach((agent, index) => {
+        // 第 5 張卡片前插入換頁標籤，符合 A4 單頁 4 張排版
+        if (index === 4) {
+          const pageBreak = document.createElement("div");
+          pageBreak.className = "page-break";
+          container.appendChild(pageBreak);
+        }
+
+        const masteryVal = getRandomInRange(agent.masteryRange[0], agent.masteryRange[1]);
+        const confidenceVal = getRandomInRange(agent.confidenceRange[0], agent.confidenceRange[1]);
+
+        const masteryRangeText = `${agent.masteryRange[0].toFixed(2)}~${agent.masteryRange[1].toFixed(2)}`;
+        const confidenceRangeText = `${agent.confidenceRange[0].toFixed(2)}~${agent.confidenceRange[1].toFixed(2)}`;
+
+        const cardHTML = `
+          <div class="card">
+            <div class="card-header">
+              <span class="badge badge-${agent.code}">${agent.code}</span>
+              <div class="card-title-row">
+                <h2>${agent.name}</h2>
+                <span class="agent-id">ID: ${agent.id}</span>
+              </div>
+            </div>
+
+            <div class="section-header">
+              <span class="section-title">Knowledge State</span>
+              <span class="dynamic-tag">初始隨機・互動可突破區間</span>
+            </div>
+
+            <div class="metric-row">
+              <span class="metric-label">掌握度 <span class="range-hint">[${masteryRangeText}]</span></span>
+              <div class="bar-container">
+                <div class="bar-fill" style="width: ${masteryVal * 100}%; background-color: ${agent.masteryColor};"></div>
+              </div>
+              <span class="metric-val">${masteryVal}</span>
+            </div>
+
+            <div class="metric-row">
+              <span class="metric-label">信心度 <span class="range-hint">[${confidenceRangeText}]</span></span>
+              <div class="bar-container">
+                <div class="bar-fill" style="width: ${confidenceVal * 100}%; background-color: ${agent.confidenceColor};"></div>
+              </div>
+              <span class="metric-val">${confidenceVal}</span>
+            </div>
+
+            <div class="section-header">
+              <span class="section-title">Classroom State</span>
+            </div>
+
+            <div class="status-grid">
+              <div class="status-item">
+                <span class="status-label">參與狀態 Engagement</span>
+                <span class="status-val">${agent.engagement}</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">行為表現 Behavior</span>
+                <span class="status-val">${agent.behavior}</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">當前情緒 Emotion</span>
+                <span class="status-val">${agent.emotion}</span>
+              </div>
+              <div class="status-item">
+                <span class="status-label">迷思狀態 Misconception</span>
+                <span class="status-val" style="color: ${agent.misconceptionColor};">${agent.misconception}</span>
+              </div>
+            </div>
+
+            <div class="interaction-box ${agent.boxClass}">
+              <div><strong>典型行為：</strong>${agent.typicalBehavior}</div>
+              <div><strong>教師互動反應：</strong>${agent.teacherReaction}</div>
+            </div>
+
+            <div class="cut-corner">
+              <span>動態邊界: [0.00, 1.00]</span>
+              <span>✂ ${agent.id}</span>
+            </div>
+          </div>
+        `;
+
+        container.insertAdjacentHTML("beforeend", cardHTML);
+      });
+    }
+
+    // 每次載入/重啟頁面時自動執行隨機初始化
+    window.onload = randomizeAll;
+  </script>
+
+</body>
+</html>
